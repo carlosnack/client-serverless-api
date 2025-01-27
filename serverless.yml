@@ -1,0 +1,82 @@
+service: client-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+          Resource: !GetAtt ClientsTable.Arn
+  environment:
+    CLIENTS_TABLE: !Ref ClientsTable
+
+resources:
+  Resources:
+    ClientsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ClientsTable
+        AttributeDefinitions:
+          - AttributeName: clientId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: clientId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+functions:
+  createClient:
+    handler: src/functions/createClient.handler
+    events:
+      - http:
+          path: clients
+          method: post
+          cors: true
+
+  getClient:
+    handler: src/functions/getClient.handler
+    events:
+      - http:
+          path: clients/{clientId}
+          method: get
+          cors: true
+
+  updateClient:
+    handler: src/functions/updateClient.handler
+    events:
+      - http:
+          path: clients/{clientId}
+          method: put
+          cors: true
+
+  deleteClient:
+    handler: src/functions/deleteClient.handler
+    events:
+      - http:
+          path: clients/{clientId}
+          method: delete
+          cors: true
+
+  listClients:
+    handler: src/functions/listClients.handler
+    events:
+      - http:
+          path: clients
+          method: get
+          cors: true
+
+plugins:
+  - serverless-offline
+  - serverless-esbuild
