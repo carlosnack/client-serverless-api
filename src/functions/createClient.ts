@@ -1,33 +1,32 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDB } from 'aws-sdk';
-import { UpdateClientRequest } from '../types';
+import { CreateClientRequest, Client } from '../types';
 
-export const handler = async (
-    event: APIGatewayProxyEvent,
-    dynamoDb = new DynamoDB.DocumentClient() // Injeção da dependência
-): Promise<APIGatewayProxyResult> => {
-    const clientId = event.pathParameters?.clientId;
-    const requestBody: UpdateClientRequest = JSON.parse(event.body || '{}');
+function generateClientId(): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `${timestamp}-${random}`;
+}
+
+const dynamoDb = new DynamoDB.DocumentClient();
+
+export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    const requestBody: CreateClientRequest = JSON.parse(event.body || '{}');
+
+    const client: Client = {
+        clientId: generateClientId(),
+        ...requestBody,
+    };
 
     await dynamoDb
-        .update({
+        .put({
             TableName: process.env.CLIENTS_TABLE!,
-            Key: { clientId },
-            UpdateExpression:
-                'SET fullName = :fullName, birthDate = :birthDate, isActive = :isActive, addresses = :addresses, contacts = :contacts',
-            ExpressionAttributeValues: {
-                ':fullName': requestBody.fullName,
-                ':birthDate': requestBody.birthDate,
-                ':isActive': requestBody.isActive,
-                ':addresses': requestBody.addresses,
-                ':contacts': requestBody.contacts,
-            },
-            ReturnValues: 'ALL_NEW',
+            Item: client,
         })
         .promise();
 
     return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Client updated successfully' }),
+        statusCode: 201,
+        body: JSON.stringify(client),
     };
 };
