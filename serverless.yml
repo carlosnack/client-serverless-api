@@ -1,10 +1,9 @@
 service: client-api
 
-frameworkVersion: '3'
-
 provider:
   name: aws
-  runtime: nodejs18.x
+  runtime: nodejs22.x
+  timeout: 300 # Aumente o timeout para 30 segundos (ou mais, se necessário)
   region: us-east-1
   iam:
     role:
@@ -17,9 +16,21 @@ provider:
             - dynamodb:DeleteItem
             - dynamodb:Scan
           Resource: !GetAtt ClientsTable.Arn
+        - Effect: Allow
+          Action:
+            - execute-api:Invoke # Permite que o API Gateway invoque a Lambda
+          Resource: arn:aws:execute-api:us-east-1:*:*
   environment:
     CLIENTS_TABLE: !Ref ClientsTable
 
+package:
+  individually: true # Define se cada função será empacotada individualmente (true) ou tudo em um único pacote (false)
+  exclude:
+    - node_modules/aws-sdk/** # Exclui o AWS SDK, pois ele já está disponível no ambiente Lambda
+    - .serverless/**          # Exclui a pasta .serverless (gerada durante o empacotamento)
+    - src/functions/__tests__/**
+  include:
+    - src/**                  # Inclui apenas a pasta src, onde está o código da sua aplicação
 resources:
   Resources:
     ClientsTable:
@@ -43,7 +54,7 @@ functions:
       - http:
           path: clients
           method: post
-          cors: true
+          
 
   getClient:
     handler: src/functions/getClient.handler
@@ -51,7 +62,7 @@ functions:
       - http:
           path: clients/{clientId}
           method: get
-          cors: true
+          
 
   updateClient:
     handler: src/functions/updateClient.handler
@@ -59,7 +70,7 @@ functions:
       - http:
           path: clients/{clientId}
           method: put
-          cors: true
+          
 
   deleteClient:
     handler: src/functions/deleteClient.handler
@@ -67,7 +78,7 @@ functions:
       - http:
           path: clients/{clientId}
           method: delete
-          cors: true
+          
 
   listClients:
     handler: src/functions/listClients.handler
@@ -75,8 +86,4 @@ functions:
       - http:
           path: clients
           method: get
-          cors: true
-
-plugins:
-  - serverless-offline
-  - serverless-esbuild
+          

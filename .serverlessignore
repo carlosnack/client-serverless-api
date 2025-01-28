@@ -1,0 +1,9 @@
+# Ignorar tudo
+*
+
+# Exceto esses arquivos/pastas
+!src/**
+!handler.js
+!serverless.yml
+!package.json
+!tsconfig.json
